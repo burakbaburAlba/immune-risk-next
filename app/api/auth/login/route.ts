@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import * as bcrypt from 'bcryptjs';
 import { sanitizeString, checkRateLimit } from '@/lib/validation';
+import { findUserByIdentifier, updateLastLogin } from '@/lib/data/users';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,15 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by username or email (Prisma uses parameterized queries - SQL injection safe)
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { username: sanitizedUsername },
-          { email: sanitizedUsername }
-        ]
-      }
-    });
+    const user = await findUserByIdentifier(sanitizedUsername);
 
     if (!user) {
       return NextResponse.json(
@@ -45,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is active
-    if (!user.isActive) {
+    if (!user.is_active) {
       return NextResponse.json(
         { error: 'Hesabınız devre dışı' },
         { status: 403 }
@@ -63,10 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update last login
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() }
-    });
+    await updateLastLogin(user.id);
 
     // Create token
     const userData = {
