@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as bcrypt from 'bcryptjs';
 import { sanitizeString, validateEmail, validateUsername, validatePassword, checkRateLimit } from '@/lib/validation';
-import { Client } from 'pg';
+import { createUser, findUserByIdentifier } from '@/lib/data/users';
 
 export async function POST(request: NextRequest) {
   console.log('Register API called');
@@ -67,27 +67,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Connecting to database...');
-    
-    // Use pg client directly (more reliable than Prisma for Render)
-    const client = new Client({
-      connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false
-      }
-    });
-
-    await client.connect();
-    console.log('Database connected');
-
     // Check if username or email already exists
-    const existingUserResult = await client.query(
-      'SELECT id FROM users WHERE username = $1 OR email = $2',
-      [sanitizedUsername, sanitizedEmail]
-    );
+    const existingUser = await findUserByIdentifier(sanitizedUsername);
+    const existingByEmail = await findUserByIdentifier(sanitizedEmail);
 
-    if (existingUserResult.rows.length > 0) {
-      await client.end();
+    if (existingUser || existingByEmail) {
       return NextResponse.json(
         { error: 'Bu kullanıcı adı veya email zaten kullanılıyor' },
         { status: 400 }
@@ -99,17 +83,13 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     console.log('Creating user...');
-    // Create user
-    const result = await client.query(
-      `INSERT INTO users (username, email, password, role, is_active, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-       RETURNING id, username, email, role, is_active, created_at`,
-      [sanitizedUsername, sanitizedEmail, hashedPassword, sanitizedRole, true]
-    );
-
-    await client.end();
-
-    const user = result.rows[0];
+    const user = await createUser({
+      username: sanitizedUsername,
+      email: sanitizedEmail,
+      password: hashedPassword,
+      role: sanitizedRole,
+      isActive: true
+    });
     console.log('User created:', user.username);
 
     return NextResponse.json({
