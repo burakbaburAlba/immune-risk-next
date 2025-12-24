@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as bcrypt from 'bcryptjs';
 import { sanitizeString, checkRateLimit } from '@/lib/validation';
-import { findUserByIdentifier, updateLastLogin } from '@/lib/data/users';
+import { authenticateUser } from '@/lib/data/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,55 +26,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await findUserByIdentifier(sanitizedUsername);
+    const auth = await authenticateUser(sanitizedUsername, password);
 
-    if (!user) {
+    if (auth.status === 'not_found') {
+      return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 401 });
+    }
+    if (auth.status === 'inactive') {
+      return NextResponse.json({ error: 'Hesabınız devre dışı' }, { status: 403 });
+    }
+    if (auth.status === 'invalid_password') {
+      return NextResponse.json({ error: 'Geçersiz şifre' }, { status: 401 });
+    }
+    if (auth.status !== 'ok') {
       return NextResponse.json(
-        { error: 'Kullanıcı bulunamadı' },
-        { status: 401 }
+        { error: 'Giriş başarısız', details: 'Auth error' },
+        { status: 500 }
       );
     }
 
-    // Check if user is active
-    if (!user.is_active) {
-      return NextResponse.json(
-        { error: 'Hesabınız devre dışı' },
-        { status: 403 }
-      );
-    }
-
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid) {
-      return NextResponse.json(
-        { error: 'Geçersiz şifre' },
-        { status: 401 }
-      );
-    }
-
-    // Update last login
-    await updateLastLogin(user.id);
-
-    // Create token
-    const userData = {
-      id: user.id.toString(),
-      username: user.username,
-      email: user.email,
-      role: user.role
-    };
-
-    const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
-    const payload = btoa(JSON.stringify({
-      ...userData,
-      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
-      iat: Math.floor(Date.now() / 1000)
-    }));
-    const token = `${header}.${payload}.signature`;
+    const { payload, token } = auth;
 
     return NextResponse.json({
       success: true,
-      user: userData,
+      user: {
+        id: payload.id,
+        username: payload.username,
+        email: payload.email,
+        role: payload.role
+      },
       token
     });
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import * as bcrypt from 'bcryptjs';
+import { createUser, findUserByIdentifier } from '@/lib/data/users';
 
 export async function POST() {
   try {
@@ -12,19 +12,15 @@ export async function POST() {
     let skipped = 0;
 
     // Upsert admin user - sadece yoksa ekle, varsa dokunma
-    const existingAdmin = await prisma.user.findUnique({
-      where: { email: 'admin@example.com' }
-    });
+    const existingAdmin = await findUserByIdentifier('admin@example.com');
 
     if (!existingAdmin) {
-      await prisma.user.create({
-        data: {
-          username: 'admin',
-          email: 'admin@example.com',
-          password: adminPassword,
-          role: 'admin',
-          isActive: true,
-        }
+      await createUser({
+        username: 'admin',
+        email: 'admin@example.com',
+        password: adminPassword,
+        role: 'admin',
+        isActive: true,
       });
       created++;
     } else {
@@ -32,19 +28,15 @@ export async function POST() {
     }
 
     // Upsert mehmetbabur user - sadece yoksa ekle, varsa dokunma
-    const existingMehmet = await prisma.user.findUnique({
-      where: { email: 'mehmetbabur@example.com' }
-    });
+    const existingMehmet = await findUserByIdentifier('mehmetbabur@example.com');
 
     if (!existingMehmet) {
-      await prisma.user.create({
-        data: {
-          username: 'mehmetbabur',
-          email: 'mehmetbabur@example.com',
-          password: userPassword,
-          role: 'admin',
-          isActive: true,
-        }
+      await createUser({
+        username: 'mehmetbabur',
+        email: 'mehmetbabur@example.com',
+        password: userPassword,
+        role: 'admin',
+        isActive: true,
       });
       created++;
     } else {
