@@ -275,7 +275,7 @@ export default function Navbar() {
           
           <Button
             component={Link}
-            href="/register"
+            href="/patients/register"
             color="inherit"
             startIcon={<PersonAdd />}
             sx={{ 
@@ -288,7 +288,7 @@ export default function Navbar() {
               }
             }}
           >
-            Yeni Hasta
+            Yeni Hasta Ekle
           </Button>
           
           <Button

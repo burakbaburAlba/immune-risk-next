@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import ThemeRegistry from './lib/registry';
 import Navbar from './components/Navbar';
-import Footer from './components/Footer';
+import ConditionalFooter from './components/ConditionalFooter';
 import { Box } from '@mui/material';
 import { NotificationProvider } from '../components/NotificationProvider';
 
@@ -28,7 +28,7 @@ export default function RootLayout({
               <Box component="main" sx={{ flex: 1 }}>
                 {children}
               </Box>
-              <Footer />
+              <ConditionalFooter />
             </Box>
           </NotificationProvider>
         </ThemeRegistry>

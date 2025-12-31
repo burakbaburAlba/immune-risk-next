@@ -48,8 +48,7 @@ import {
   Cancel,
   Warning,
   Info,
-  Brightness3,
-  Psychology
+  Brightness3
 } from '@mui/icons-material';
 import ClinicalFeatureModal from '../../../components/ClinicalFeatureModal';
 
@@ -85,8 +84,6 @@ interface Patient {
   diagnosisDate?: string;
   rule_based_score?: number;
   ruleBasedScore?: number;
-  ml_score?: number;
-  mlScore?: number;
   final_risk_level?: string;
   finalRiskLevel?: string;
   clinicalFeatures?: ClinicalFeature[];
@@ -552,175 +549,45 @@ export default function PatientDetailPage() {
 
               {/* Sağ Sütun - Tanı Bilgileri */}
               <Box sx={{ flex: 1 }}>
-                <Card sx={{ 
-                  height: 'fit-content',
-                  bgcolor: (patient.hasImmuneDeficiency ?? patient.has_immune_deficiency) === true 
-                    ? 'error.50' 
-                    : (patient.hasImmuneDeficiency ?? patient.has_immune_deficiency) === false 
-                      ? 'success.50' 
-                      : 'background.paper'
-                }}>
+                <Card sx={{ height: 'fit-content' }}>
                   <CardContent>
                     <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                      🔬 Tanı Bilgileri
+                      Tanı Bilgileri
                     </Typography>
                     <Divider sx={{ mb: 2 }} />
                     
                     <Stack spacing={2}>
                       <Box>
-                        <Typography fontWeight="bold">İmmün Yetmezlik Riski:</Typography>
-                        {getDiagnosisChip(patient.hasImmuneDeficiency ?? patient.has_immune_deficiency)}
+                        <Typography fontWeight="bold">İmmün Yetmezlik:</Typography>
+                        {getDiagnosisChip(patient.hasImmuneDeficiency)}
                       </Box>
                       
                       <Box>
-                        <Typography fontWeight="bold">Tanı/Değerlendirme:</Typography>
-                        <Typography sx={{ 
-                          color: (patient.diagnosisType || patient.diagnosis_type) ? 'text.primary' : 'text.secondary',
-                          fontStyle: (patient.diagnosisType || patient.diagnosis_type) ? 'normal' : 'italic'
-                        }}>
-                          {patient.diagnosisType || patient.diagnosis_type || 'Henüz ML değerlendirmesi yapılmadı'}
-                        </Typography>
+                        <Typography fontWeight="bold">Tanı Türü:</Typography>
+                        <Typography>{patient.diagnosisType || 'CVID'}</Typography>
                       </Box>
                       
-                      {(patient.diagnosisDate || patient.diagnosis_date) && (
-                        <Box>
-                          <Typography fontWeight="bold">Değerlendirme Tarihi:</Typography>
-                          <Typography>{patient.diagnosisDate || patient.diagnosis_date}</Typography>
-                        </Box>
-                      )}
-
-                      {/* ML Skor gösterimi */}
-                      {(patient.mlScore !== undefined || patient.ml_score !== undefined) && (
-                        <Box>
-                          <Typography fontWeight="bold">ML Skoru:</Typography>
-                          <Typography>
-                            %{(((patient.mlScore ?? patient.ml_score) || 0) * 100).toFixed(1)} olasılık
-                          </Typography>
-                        </Box>
-                      )}
-
-                      {/* Risk Seviyesi */}
-                      {(patient.finalRiskLevel || patient.final_risk_level) && (
-                        <Box>
-                          <Typography fontWeight="bold">Risk Seviyesi:</Typography>
-                          <Chip 
-                            label={patient.finalRiskLevel || patient.final_risk_level} 
-                            color={
-                              (patient.finalRiskLevel || patient.final_risk_level)?.includes('Yüksek') ? 'error' :
-                              (patient.finalRiskLevel || patient.final_risk_level)?.includes('Orta') ? 'warning' : 'success'
-                            }
-                            size="small"
-                          />
-                        </Box>
-                      )}
-                      
-                      {/* ML değerlendirmesi yapılmışsa Görüntüle, yapılmamışsa Değerlendir */}
-                      <Box sx={{ mt: 2, display: 'flex', gap: 1, flexDirection: 'column' }}>
-                        {(patient.diagnosisType || patient.diagnosis_type) && (
-                          <Button
-                            variant="contained"
-                            size="small"
-                            color="success"
-                            startIcon={<Assessment />}
-                            fullWidth
-                            onClick={() => router.push(`/patients/${patient.id}/ml-result`)}
-                          >
-                            ML Sonucunu Görüntüle
-                          </Button>
-                        )}
-                        <Button
-                          variant={(patient.diagnosisType || patient.diagnosis_type) ? "outlined" : "contained"}
-                          size="small"
-                          color="primary"
-                          startIcon={<Psychology />}
-                          fullWidth
-                          onClick={() => router.push(`/patients/${patient.id}/ml-assessment`)}
-                        >
-                          {(patient.diagnosisType || patient.diagnosis_type) ? 'Yeniden Değerlendir' : 'ML Değerlendirmesi Yap'}
-                        </Button>
+                      <Box>
+                        <Typography fontWeight="bold">Tanı Tarihi:</Typography>
+                        <Typography>{patient.diagnosisDate || '10/02/2024'}</Typography>
                       </Box>
+                      
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<Update />}
+                        fullWidth
+                        sx={{ mt: 2 }}
+                        onClick={() => router.push(`/patients/${patient.id}/update-diagnosis`)}
+                      >
+                        Tanı Bilgilerini Güncelle
+                      </Button>
                     </Stack>
                   </CardContent>
                 </Card>
               </Box>
             </Box>
 
-            {/* Risk Değerlendirme */}
-            <Card sx={{ mb: 3, bgcolor: 'info.main', color: 'white' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-                    📊 Risk Değerlendirme
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    startIcon={<Psychology />}
-                    onClick={() => router.push(`/patients/${patient.id}/ml-assessment`)}
-                    sx={{ bgcolor: 'white', color: 'info.main', '&:hover': { bgcolor: 'grey.100' } }}
-                  >
-                    ML Değerlendirmesi Yap
-                  </Button>
-                </Box>
-                
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mt: 2 }}>
-                  <Paper sx={{ flex: 1, p: 2, textAlign: 'center', bgcolor: 'white', color: 'text.primary' }}>
-                    <Typography variant="h4" fontWeight="bold">
-                      {patient.ruleBasedScore || '-'}
-                    </Typography>
-                    <Typography variant="body2">
-                      Kural Puanı
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Klinik kriterlere göre hesaplanan puan
-                    </Typography>
-                  </Paper>
-                  
-                  <Paper sx={{ flex: 1, p: 2, textAlign: 'center', bgcolor: 'white', color: 'text.primary' }}>
-                    <Typography variant="h4" fontWeight="bold">
-                      -
-                    </Typography>
-                    <Typography variant="body2">
-                      ML Puanı
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Makine öğrenmesi modeli tahmini
-                    </Typography>
-                  </Paper>
-                  
-                  <Paper sx={{ flex: 1, p: 2, textAlign: 'center', bgcolor: 'white', color: 'text.primary' }}>
-                    <Typography variant="h4" fontWeight="bold">
-                      {patient.ruleBasedScore || '-'}
-                    </Typography>
-                    <Typography variant="body2">
-                      Toplam Puan
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Birleştirilmiş risk puanı
-                    </Typography>
-                  </Paper>
-                  
-                  <Paper sx={{ flex: 1, p: 2, textAlign: 'center', bgcolor: `${getRiskLevelColor(patient.finalRiskLevel)}.light` }}>
-                    <Typography variant="h6" fontWeight="bold" color="white">
-                      Risk Seviyesi
-                    </Typography>
-                    <Typography variant="h5" fontWeight="bold" color="white">
-                      {patient.finalRiskLevel === 'high' ? 'Yüksek Risk' : 
-                       patient.finalRiskLevel === 'medium' ? 'Orta Risk' : 
-                       patient.finalRiskLevel ? patient.finalRiskLevel : 'Değerlendirilmedi'}
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      sx={{ mt: 1, bgcolor: 'primary.main' }}
-                      onClick={() => router.push(`/patients/${patient.id}/ml-assessment`)}
-                    >
-                      Değerlendir
-                    </Button>
-                  </Paper>
-                </Box>
-              </CardContent>
-            </Card>
           </Box>
         );
 
@@ -1238,9 +1105,9 @@ export default function PatientDetailPage() {
           Geri
         </Button>
         <Typography variant="h4" fontWeight="bold">
-          {maskName(patient.firstName || '', patient.lastName || '')}
+          {maskName(patient.firstName, patient.lastName)}
         </Typography>
-        <Chip label={patient.file_number || patient.fileNumber || `#${patient.id}`} size="small" color="primary" />
+        <Chip label={patient.lastName} size="small" color="primary" />
       </Box>
 
       {/* Tab Navigation */}
